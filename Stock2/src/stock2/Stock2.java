@@ -5,121 +5,86 @@
  */
 package stock2;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
  *
  * @author mark
  */
+import java.net.*;
+import java.io.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+
+
 public class Stock2 {
-final static int size=1024;
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        
+    public static void main(String[] args) throws Exception {
         
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
         Calendar cal = Calendar.getInstance();
-       
+         PrintWriter out = null;
         System.out.println(dateFormat.format(cal.getTime()));
-       //   cal.add(Calendar.DATE, -1);   
-       for (int i =0;i<=300;i++){
-              System.out.println("http://www.free88.org/free88trigger/DownloadFile.aspx?Exchange=KLSE&Filename=KLSE_"+dateFormat.format(cal.getTime())+".txt");
+        // cal.add(Calendar.DATE, -4);   
+       for (int i =0;i<=4750;i++){
+      System.out.println(i);
+        // fileDownload("http://www.free88.org/free88trigger/DownloadFile.aspx?Exchange=KLSE&Filename=KLSE_"+dateFormat.format(cal.getTime())+".txt","data");
+              URL oracle = new URL("http://www.free88.org/free88trigger/DownloadFile.aspx?Exchange=KLSE&Filename=KLSE_"+dateFormat.format(cal.getTime())+".txt");
+      
     
-         fileDownload("http://www.free88.org/free88trigger/DownloadFile.aspx?Exchange=KLSE&Filename=KLSE_"+dateFormat.format(cal.getTime())+".txt","data");
-           
-         cal.add(Calendar.DATE, -1);   
-     }
-   }
-    
-    
-    public static void fileDownload(String fAddress, String destinationDir)
-{
- 
-  int slashIndex =fAddress.lastIndexOf('_');
-int periodIndex =fAddress.lastIndexOf('.');
+     
 
-String fileName=fAddress.substring(slashIndex + 1);
+       BufferedReader in = new BufferedReader(
+        new InputStreamReader(oracle.openStream()));
 
-if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1)
-{
-fileUrl(fAddress,fileName,destinationDir);
-}
-else
-{
-System.err.println("path or file name.");
-}}
-    public static void fileUrl(String fAddress, String localFileName, String destinationDir) {
-  
-        
-    
-    
-    
-OutputStream outStream = null;
-URLConnection  uCon = null;
-
-
-InputStream is = null;
-try {
-URL Url;
-byte[] buf;
-int ByteRead,ByteWritten=0;
-Url= new URL(fAddress);
-outStream = new BufferedOutputStream(new
-FileOutputStream(destinationDir+"\\"+"rdy.txt",true));
-
-uCon = Url.openConnection();
-is = uCon.getInputStream();
-buf = new byte[size];
-while ((ByteRead = is.read(buf)) != -1) {
-
-   // System.out.println();
-outStream.write(buf, 0, ByteRead);
-ByteWritten += ByteRead;
-}
-
- //processfile( destinationDir+"\\"+localFileName);
-
-}
-catch (Exception e) {
-System.out.println("fAddress"+fAddress);
-}
-finally {
-try {
+        String inputLine;
+        while ((inputLine = in.readLine()) != null){
+         
+if (!inputLine.contains("<") && inputLine.contains(",")){
+      String value[]=inputLine.split(",");
+          String year=value[3].substring(0, 4);
+                   String month=value[3].substring(4, 6);
+                         String day=value[3].substring(6, 8);
+      if(value.length==10 && dateFormat.format(cal.getTime()).equals(year+""+month+""+day)){
    
-    if (is != null){
-is.close();
-outStream.close();
-
+                         
+        out= new PrintWriter(new BufferedWriter(new FileWriter("data/"+value[1]+".txt", true)));
+                    out.write(value[2]+","+year+"-"+month+"-"+day+","+value[4]+","+value[5]+","+value[6]+","+value[7]+","+value[8]+","+value[9]+"\n");
+                       out.close();
+      }
+}   
+        }
+             cal.add(Calendar.DATE, -1);   
+      
+        in.close();
     }
-}
-catch (IOException e) {
-e.printStackTrace();
-}}
+System.out.println("DOnE downlaod file");
+        listFilesForFolder(folder);
+        System.out.println("DOnE downlaod file");
+    }
+      public static File folder = new File("data/");
+  static String temp = "";
+      public static void listFilesForFolder(final File folder) {
+
+    for (final File fileEntry : folder.listFiles()) {
+      if (fileEntry.isDirectory()) {
+        // System.out.println("Reading files under the folder "+folder.getAbsolutePath());
+        listFilesForFolder(fileEntry);
+      } else {
+        if (fileEntry.isFile()) {
+          temp = fileEntry.getName();
+       
+          if ((temp.substring(temp.lastIndexOf('.') + 1, temp.length()).toLowerCase()).equals("txt")){
+       String value[]=temp.split(".txt");
+                new MainDatabase().createTable(value[0]);
+                    new MainDatabase().loadDatabase(temp, value[0]);
+         //   System.out.println("File= "+value[0]);
+          }
+        }
+
+      }
+    }
+  }
     
-}
-    
-      public static  void processfile(String FileName){
+         public static  void processfile(String FileName){
         try {
             BufferedReader br = new BufferedReader(new FileReader(FileName));
             String line;
@@ -128,7 +93,7 @@ e.printStackTrace();
          
                String value[]=line.split(",");
                       if (value.length==10){
-  if(first){
+  
             String year=value[3].substring(0, 4);
                    String month=value[3].substring(4, 6);
                          String day=value[3].substring(6, 8);
@@ -136,13 +101,13 @@ e.printStackTrace();
         
        if (new MainDatabase().selectTemporary(value[1])==0){
             
-            System.out.println(value[1]);
+       
            new MainDatabase().createTable(value[1]);
       new MainDatabase().insertTemporaryTable(value[0],value[1]);
   }
            
                new MainDatabase().insertDatabase( value,year+"-"+month+"-"+day);
-  }
+  
             first=true;          
                       
                       }
@@ -150,19 +115,4 @@ e.printStackTrace();
                     System.out.println("processfile table"+ex);
         }
   }
-  
-      public static  boolean checkExist(ArrayList value, String name){
-          boolean result=false;
-          
-          
-          for (int i =0 ; i <value.size();i++){
-              if (value.get(i).equals(name)){
-                  result= true;
-              }
-          }
-          
-          System.out.println("checkExist     "+result);
-          return result;
-      }
-      
 }
